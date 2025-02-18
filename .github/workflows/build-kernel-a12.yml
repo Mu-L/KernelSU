@@ -1,7 +1,7 @@
 name: Build Kernel - Android 12
 on:
   push:
-    branches: ["main", "ci"]
+    branches: ["main", "ci", "checkci"]
     paths:
       - ".github/workflows/build-kernel-a12.yml"
       - ".github/workflows/gki-kernel.yml"
@@ -17,34 +17,16 @@ on:
   workflow_call:
 jobs:
   build-kernel:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref != 'refs/heads/checkci'
     strategy:
       matrix:
         include:
-          - sub_level: 66
-            os_patch_level: 2022-01
-          - sub_level: 81
-            os_patch_level: 2022-03
-          - sub_level: 101
-            os_patch_level: 2022-05
-          - sub_level: 110
-            os_patch_level: 2022-07
-          - sub_level: 117
-            os_patch_level: 2022-09
-          - sub_level: 136
-            os_patch_level: 2022-11
-          - sub_level: 149
-            os_patch_level: 2023-01
-          - sub_level: 160
-            os_patch_level: 2023-03
-          - sub_level: 168
-            os_patch_level: 2023-05
-          - sub_level: 177
-            os_patch_level: 2023-07
-          - sub_level: 185
-            os_patch_level: 2023-09
-          - sub_level: 198
-            os_patch_level: 2023-11
+          - sub_level: 209
+            os_patch_level: 2024-05
+          - sub_level: 218
+            os_patch_level: 2024-08
+          - sub_level: 226
+            os_patch_level: 2024-11
     uses: ./.github/workflows/gki-kernel.yml
     secrets: inherit
     with:
@@ -53,6 +35,7 @@ jobs:
       tag: android12-5.10-${{ matrix.os_patch_level }}
       os_patch_level: ${{ matrix.os_patch_level }}
       patch_path: "5.10"
+  
   upload-artifacts:
     needs: build-kernel
     runs-on: ubuntu-latest
@@ -80,11 +63,11 @@ jobs:
       - name: Download prebuilt toolchain
         run: |
           AOSP_MIRROR=https://android.googlesource.com
-          BRANCH=main-kernel-build-2023
+          BRANCH=main-kernel-build-2024
           git clone $AOSP_MIRROR/platform/prebuilts/build-tools -b $BRANCH --depth 1 build-tools
           git clone $AOSP_MIRROR/kernel/prebuilts/build-tools -b $BRANCH --depth 1 kernel-build-tools
           git clone $AOSP_MIRROR/platform/system/tools/mkbootimg -b $BRANCH --depth 1
-          pip3 install telethon==1.31.1
+          pip3 install telethon
 
       - name: Set boot sign key
         env:
@@ -96,7 +79,8 @@ jobs:
 
       - name: Bot session cache
         id: bot_session_cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
+        if: false
         with:
           path: scripts/ksubot.session
           key: ${{ runner.os }}-bot-session
@@ -124,11 +108,11 @@ jobs:
           path: Image-android12*/*.img.gz
 
   check-build-kernel:
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
+    if: (github.event_name == 'pull_request' && !github.event.pull_request.draft) || github.ref == 'refs/heads/checkci'
     uses: ./.github/workflows/gki-kernel.yml
     with:
       version: android12-5.10
-      version_name: android12-5.10.177
-      tag: android12-5.10-2023-06
-      os_patch_level: 2023-06
+      version_name: android12-5.10.223
+      tag: android12-5.10-2024-11
+      os_patch_level: 2024-11
       patch_path: "5.10"
